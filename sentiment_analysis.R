@@ -10,16 +10,18 @@ library(wordcloud)
 library(RColorBrewer)
 library(sentiment)
 
-consumer_key <- 'Gvb1JduVEjUyCxci2RhG32eAR'
-consumer_secret <- 'V19jwij6feZMF87GLeMSgFvK2QH4JZbiVAwgIXsW0WCD5aljc2'
-access_token <- '721483439673839616-6zCsCkUH98E5DFiK4OElSnPJdwpeuoP'
-access_secret <- 'nTKdYVoAYb0ScJayJNPWVB7hzWmpffU6C0sjyz24RZG68'
+consumer_key <- 'hidden'
+consumer_secret <- 'hidden'
+access_token <- hidden'
+access_secret <- 'hidden'
 setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
 2
 
-# harvest some tweets
-tiffany_tweets = searchTwitter("tiffany+co", n=1500, lang="en")
+# this API can not download more than 11222 tweets, twitter will "rate limit" the API when doing so
+tiffany_tweets = searchTwitter("tiffany+co", n=11222, lang="en")
+save(tiffany_tweets, file = "tweets.Rdata")
 
+object.size(tiffany_tweets)
 # get the text
 tiffany_txt = sapply(tiffany_tweets, function(x) x$getText())
 tiffany_txt
@@ -62,6 +64,28 @@ names(tiffany_txt) = NULL
 class(tiffany_txt)
 #remove duplicates of tweets
 tiffany_txt <- unique(tiffany_txt)
+tiffany_txt = gsub("tiffany", "", tiffany_txt)
+tiffany_txt = gsub("amp", "", tiffany_txt)
+tiffany_txt <- tm_map(tiffany_txt, removeWords("tiffany", "amp", "co"))
+object.size(tiffany_txt)
+wordcloud(tiffany_txt)
+getwd()
+png("tiffany_wordcloud.png", width=6, height=4, units="in", res=600)
+wordcloud(tiffany_txt, random.order = F, max.words = 300, scale = c(3, 0.5), colors = rainbow(20) )
+dev.off()
+
+##tiffany_emo = classify_emotion(tiffany_txt, algorithm="bayes", prior=1.0)
+tiffany_emo <- sentiment(tiffany_txt)
+tiffany_emo_df <- data.frame(tiffany_txt, polarity = tiffany_emo$polarity)
+tiffany_emo_df[1,]
+
+png("tiffany_emotion.png", width=8, height=6, units="in", res=600)
+ggplot(tiffany_emo_df, aes(x=polarity)) + geom_bar(aes(y=..count.., fill=polarity)) +scale_fill_brewer(palette="RdGy") +labs(x="polarity categories", y="number of tweets") +labs(title = "Sentiment Analysis of Tweets about Tiffany & co\n(classification by polarity)",plot.title = element_text(size=12))
+dev.off()
+
+barplot(tiffany_emo_df)
+
+
 tiffany_corpus <- Corpus(VectorSource((tiffany_txt)))
 tiffany_corpus
 
